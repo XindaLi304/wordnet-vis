@@ -51,6 +51,65 @@
     </div>
   </div>
 
+  <!-- Help Button (bottom-left) -->
+  <button id="helpBtn" class="help-btn" title="How to use">
+    <i class="fa-solid fa-question"></i>
+  </button>
+
+  <!-- Usage Instructions Overlay -->
+  <div id="helpOverlay" class="help-overlay hidden">
+    <div class="glass-panel help-panel">
+      <div class="help-header">
+        <h2><i class="fa-solid fa-book-open"></i> How to Use</h2>
+        <button id="helpCloseBtn" class="help-close-btn"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="help-content">
+        <div class="help-section">
+          <h3><i class="fa-solid fa-magnifying-glass"></i> Search</h3>
+          <p>Type a word in the search bar and click <strong>Explore</strong> or press <strong>Enter</strong> to expand
+            its semantic network. You can search multiple times — results accumulate on the canvas.</p>
+        </div>
+        <div class="help-section">
+          <h3><i class="fa-solid fa-expand"></i> Expand Nodes</h3>
+          <p><strong>Double-click</strong> any word node on the canvas to expand its semantic relations (synonyms,
+            antonyms, hypernyms, hyponyms, meronyms, holonyms).</p>
+        </div>
+        <div class="help-section">
+          <h3><i class="fa-solid fa-route"></i> Pathfinding</h3>
+          <p>Hold <kbd>Ctrl</kbd> (Windows) or <kbd>⌘ Cmd</kbd> (Mac) and click two nodes. The system will find and
+            display the shortest path between them via the WordNet hypernym tree.</p>
+        </div>
+        <div class="help-section">
+          <h3><i class="fa-solid fa-trash"></i> Delete Nodes</h3>
+          <p>Select one or more nodes, then press <kbd>Delete</kbd> or <kbd>Backspace</kbd> to remove the selected nodes
+            and their child subtrees.</p>
+        </div>
+        <div class="help-section">
+          <h3><i class="fa-solid fa-rotate-right"></i> Reset Canvas</h3>
+          <p>Click the <strong>↻ reset button</strong> next to the search bar to clear the entire canvas and return to
+            the initial state.</p>
+        </div>
+        <div class="help-section">
+          <h3><i class="fa-solid fa-circle-info"></i> View Details</h3>
+          <p><strong>Single-click</strong> a node to view its details in the bottom-right panel: definitions, part of
+            speech, and all semantic relations.</p>
+        </div>
+        <div class="help-section help-legend">
+          <h3><i class="fa-solid fa-palette"></i> Color Legend</h3>
+          <div class="legend-grid">
+            <span class="legend-item" style="--c:#8b5cf6">● Root Word</span>
+            <span class="legend-item" style="--c:#10b981">● Synonym</span>
+            <span class="legend-item" style="--c:#ef4444">● Antonym</span>
+            <span class="legend-item" style="--c:#3b82f6">● Hypernym (Broader)</span>
+            <span class="legend-item" style="--c:#06b6d4">● Hyponym (Narrower)</span>
+            <span class="legend-item" style="--c:#ec4899">● Meronym (Part-of)</span>
+            <span class="legend-item" style="--c:#a855f7">● Holonym (Whole-of)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Vis Network Graph Container -->
   <div id="network-container"></div>
 

@@ -455,6 +455,17 @@ function setup() {
     }
   });
 
+  // Help panel toggle
+  const helpBtn = document.getElementById('helpBtn');
+  const helpOverlay = document.getElementById('helpOverlay');
+  const helpCloseBtn = document.getElementById('helpCloseBtn');
+
+  helpBtn.addEventListener('click', () => helpOverlay.classList.remove('hidden'));
+  helpCloseBtn.addEventListener('click', () => helpOverlay.classList.add('hidden'));
+  helpOverlay.addEventListener('click', (e) => {
+    if (e.target === helpOverlay) helpOverlay.classList.add('hidden');
+  });
+
   // Seed with an initial word
   expandWord('intelligence', true);
 }
