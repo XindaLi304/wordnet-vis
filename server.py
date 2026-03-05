@@ -148,9 +148,30 @@ def get_path(word1, word2):
     if not synsets1 or not synsets2:
         return jsonify({'found': False, 'error': f'Word not found in WordNet', 'path': []})
 
-    # Find the pair of synsets with the shortest path
-    best_path = None
-    best_dist = float('inf')
+    # Helper: score how well a synset matches the intended word.
+    # Lower score = better match.
+    # Priority 0: first lemma name matches (primary meaning, e.g. cat.n.01 for "cat")
+    # Priority 1: some lemma matches (secondary alias, e.g. guy.n.01 also has lemma "cat")
+    # Priority 2: no lemma matches at all
+    def match_priority(synset, word):
+        w = word.lower().replace(' ', '_')
+        if synset.lemmas()[0].name().lower() == w:
+            return 0  # Primary match
+        if any(l.name().lower() == w for l in synset.lemmas()):
+            return 1  # Secondary match
+        return 2  # No match
+
+    # Build index maps: NLTK returns synsets ordered by frequency (most common first).
+    # We use this ordering as a tie-breaker to prefer common senses.
+    rank1 = {s: i for i, s in enumerate(synsets1)}
+    rank2 = {s: i for i, s in enumerate(synsets2)}
+
+    # Find the best synset pair using a balanced scoring:
+    # 1st: match_priority (strongly prefer synsets whose primary lemma matches the word)
+    # 2nd: freq_rank + dist combined (balance between common senses and short paths)
+    # This way tiger.n.02 (feline, rank 1, dist 8 to deer → score 9) beats
+    # tiger.n.01 (person, rank 0, dist 11 to deer → score 11).
+    best_score = (float('inf'), float('inf'))
     best_s1 = None
     best_s2 = None
 
@@ -158,8 +179,13 @@ def get_path(word1, word2):
         for s2 in synsets2:
             try:
                 dist = s1.shortest_path_distance(s2)
-                if dist is not None and dist < best_dist:
-                    best_dist = dist
+                if dist is None:
+                    continue
+                priority = match_priority(s1, word1) + match_priority(s2, word2)
+                combined = rank1[s1] + rank2[s2] + dist
+                score = (priority, combined)
+                if score < best_score:
+                    best_score = score
                     best_s1 = s1
                     best_s2 = s2
             except Exception:
@@ -168,16 +194,19 @@ def get_path(word1, word2):
     if best_s1 is None or best_s2 is None:
         return jsonify({'found': False, 'error': 'No path exists between these words in WordNet', 'path': []})
 
-    # Reconstruct the actual path via hypernym tree
-    path_synsets = best_s1.hypernym_paths()
-    path2_synsets = best_s2.hypernym_paths()
+    actual_dist = best_s1.shortest_path_distance(best_s2)
 
     # Find LCA (Lowest Common Ancestor) to reconstruct path
     path_words = reconstruct_path(best_s1, best_s2)
 
+    # Ensure endpoints use the original user-supplied words (not synset first-lemma)
+    if path_words and len(path_words) >= 2:
+        path_words[0]['word'] = word1
+        path_words[-1]['word'] = word2
+
     return jsonify({
         'found': True,
-        'distance': best_dist,
+        'distance': actual_dist,
         'synset1': best_s1.name(),
         'synset2': best_s2.name(),
         'path': path_words
