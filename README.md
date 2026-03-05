@@ -12,7 +12,7 @@ An interactive, graph-based visualization of [Princeton WordNet](https://wordnet
 - **Pure WordNet Data** — All relations come directly from NLTK WordNet, not statistical approximations.
 - **Rich Relations** — Synonyms, antonyms, hypernyms, hyponyms, meronyms, holonyms — all color-coded.
 - **Per-Synset Details** — Click any word to see each sense (synset) with its own definition, POS tag, and specific relations. No more mixing word senses.
-- **Shortest Path Finder** — Select two words (Ctrl/Cmd + click) to find the shortest semantic path through WordNet's taxonomy tree. **Repeat to uncover alternative paths!**
+- **Semantic Path Finder** — Select two words (Ctrl/Cmd + click) to find the most accurate semantic path between their primary meanings through WordNet's taxonomy tree. **Repeat to uncover alternative paths!**
 - **Cumulative Search** — Search multiple words without clearing previous results.
 - **Node Deletion** — Select nodes and press Delete/Backspace to remove them (cascades to children).
 - **Reset & Help** — One click to clear the canvas (↻) or view detailed instructions (?).
@@ -24,7 +24,7 @@ An interactive, graph-based visualization of [Princeton WordNet](https://wordnet
 | **Search** a word | Adds it to the graph with all its WordNet relations |
 | **Double-click** a node | Expands that word's relations |
 | **Click** a node | Shows per-synset definitions and relations in the info panel |
-| **Ctrl+Click** two nodes | Finds and visualizes the shortest path between them. **Repeat for more paths.** |
+| **Ctrl+Click** two nodes | Finds and visualizes a semantic path between them. **Repeat for more paths.** |
 | **Delete/Backspace** | Removes selected nodes and their subtrees |
 
 ### Example: Path from "tiger" to "deer"
