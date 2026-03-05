@@ -12,6 +12,7 @@ let nodes = new vis.DataSet();
 let edges = new vis.DataSet();
 let loadedWords = new Set(); // Keep track of words we've already fetched
 let wordAttributes = new Map(); // Store dictionary definitions and metadata
+let pathCounter = new Map(); // Track how many paths shown per word pair
 
 // UI Elements
 const searchBtn = document.getElementById('searchBtn');
@@ -319,15 +320,21 @@ function showInfoPanel(word, type) {
 
 // Path Finding via WordNet Backend (server-side BFS through hypernym tree)
 async function findConnection(w1, w2) {
-  loadingIndicator.innerHTML = '<i class="fa-solid fa-magic"></i> Finding WordNet path...';
+  // Sort pair key so (w1,w2) and (w2,w1) share the same counter
+  const pairKey = [w1, w2].sort().join('|');
+  const currentN = (pathCounter.get(pairKey) || 0) + 1;
+  pathCounter.set(pairKey, currentN);
+
+  loadingIndicator.innerHTML = `<i class="fa-solid fa-magic"></i> Finding path #${currentN}...`;
   loadingIndicator.classList.remove('hidden');
 
   try {
-    const res = await fetch(`${API_BASE}/api/path/${encodeURIComponent(w1)}/${encodeURIComponent(w2)}`);
+    const res = await fetch(`${API_BASE}/api/path/${encodeURIComponent(w1)}/${encodeURIComponent(w2)}?n=${currentN}`);
     const data = await res.json();
 
     if (!data.found || !data.path || data.path.length < 2) {
-      alert(`No path found between "${w1}" and "${w2}" in WordNet.${data.error ? ' ' + data.error : ''}`);
+      alert(`No more paths between "${w1}" and "${w2}".${data.error ? ' ' + data.error : ''}`);
+      pathCounter.set(pairKey, currentN - 1); // revert counter
       return;
     }
 
@@ -349,10 +356,10 @@ async function findConnection(w1, w2) {
     }
 
     highlightPath(pathWords);
-    console.log(`WordNet path (distance ${data.distance}):`, pathWords.join(' → '));
+    console.log(`WordNet path ${data.path_number}/${data.total_paths} (distance ${data.distance}):`, pathWords.join(' → '));
   } catch (e) {
     console.error('Pathfinding error:', e);
-    alert('Error connecting to WordNet backend. Make sure server.py is running on port 5000.');
+    alert('Error connecting to WordNet backend. Make sure server.py is running.');
   } finally {
     loadingIndicator.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Fetching semantics...';
     loadingIndicator.classList.add('hidden');
@@ -407,6 +414,7 @@ function setup() {
     edges.clear();
     loadedWords.clear();
     wordAttributes.clear();
+    pathCounter.clear();
     infoPanel.classList.add('hidden');
     searchInput.value = '';
     expandWord('intelligence', true);

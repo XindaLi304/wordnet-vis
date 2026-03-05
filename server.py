@@ -142,17 +142,17 @@ def get_related(word):
 
 @app.route('/api/path/<word1>/<word2>')
 def get_path(word1, word2):
+    from flask import request
+    # Which path to return (1-indexed). Each repeated request increments n.
+    path_index = int(request.args.get('n', 1)) - 1  # convert to 0-indexed
+
     synsets1 = get_all_synsets(word1)
     synsets2 = get_all_synsets(word2)
 
     if not synsets1 or not synsets2:
-        return jsonify({'found': False, 'error': f'Word not found in WordNet', 'path': []})
+        return jsonify({'found': False, 'error': 'Word not found in WordNet', 'paths': [], 'total_paths': 0})
 
     # Helper: score how well a synset matches the intended word.
-    # Lower score = better match.
-    # Priority 0: first lemma name matches (primary meaning, e.g. cat.n.01 for "cat")
-    # Priority 1: some lemma matches (secondary alias, e.g. guy.n.01 also has lemma "cat")
-    # Priority 2: no lemma matches at all
     def match_priority(synset, word):
         w = word.lower().replace(' ', '_')
         if synset.lemmas()[0].name().lower() == w:
@@ -161,19 +161,9 @@ def get_path(word1, word2):
             return 1  # Secondary match
         return 2  # No match
 
-    # Build index maps: NLTK returns synsets ordered by frequency (most common first).
-    # We use this ordering as a tie-breaker to prefer common senses.
-    rank1 = {s: i for i, s in enumerate(synsets1)}
-    rank2 = {s: i for i, s in enumerate(synsets2)}
-
-    # Find the best synset pair using a balanced scoring:
-    # 1st: match_priority (strongly prefer synsets whose primary lemma matches the word)
-    # 2nd: freq_rank + dist combined (balance between common senses and short paths)
-    # This way tiger.n.02 (feline, rank 1, dist 8 to deer → score 9) beats
-    # tiger.n.01 (person, rank 0, dist 11 to deer → score 11).
-    best_score = (float('inf'), float('inf'))
-    best_s1 = None
-    best_s2 = None
+    # Collect ALL valid synset pairs with their scores
+    scored_pairs = []
+    seen_paths = set()  # deduplicate identical paths
 
     for s1 in synsets1:
         for s2 in synsets2:
@@ -182,34 +172,42 @@ def get_path(word1, word2):
                 if dist is None:
                     continue
                 priority = match_priority(s1, word1) + match_priority(s2, word2)
-                combined = rank1[s1] + rank2[s2] + dist
-                score = (priority, combined)
-                if score < best_score:
-                    best_score = score
-                    best_s1 = s1
-                    best_s2 = s2
+                # Use a dedup key to avoid showing the same actual path twice
+                dedup_key = (s1.name(), s2.name())
+                if dedup_key not in seen_paths:
+                    seen_paths.add(dedup_key)
+                    scored_pairs.append((priority, dist, s1, s2))
             except Exception:
                 continue
 
-    if best_s1 is None or best_s2 is None:
-        return jsonify({'found': False, 'error': 'No path exists between these words in WordNet', 'path': []})
+    if not scored_pairs:
+        return jsonify({'found': False, 'error': 'No path exists between these words in WordNet', 'paths': [], 'total_paths': 0})
 
-    actual_dist = best_s1.shortest_path_distance(best_s2)
+    # Sort by (match_priority, distance)
+    scored_pairs.sort(key=lambda x: (x[0], x[1]))
 
-    # Find LCA (Lowest Common Ancestor) to reconstruct path
+    # Clamp index
+    if path_index >= len(scored_pairs):
+        path_index = path_index % len(scored_pairs)  # wrap around
+
+    priority, dist, best_s1, best_s2 = scored_pairs[path_index]
+
+    # Reconstruct this path
     path_words = reconstruct_path(best_s1, best_s2)
 
-    # Ensure endpoints use the original user-supplied words (not synset first-lemma)
+    # Ensure endpoints use the original user-supplied words
     if path_words and len(path_words) >= 2:
         path_words[0]['word'] = word1
         path_words[-1]['word'] = word2
 
     return jsonify({
         'found': True,
-        'distance': actual_dist,
+        'distance': dist,
         'synset1': best_s1.name(),
         'synset2': best_s2.name(),
-        'path': path_words
+        'path': path_words,
+        'path_number': path_index + 1,
+        'total_paths': len(scored_pairs)
     })
 
 
