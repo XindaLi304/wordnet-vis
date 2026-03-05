@@ -161,7 +161,14 @@ def get_path(word1, word2):
             return 1  # Secondary match
         return 2  # No match
 
-    # Collect ALL valid synset pairs with their scores
+    # Build index maps: NLTK returns synsets ordered by frequency (most common first).
+    # We use this ordering as a tie-breaker to prefer common senses.
+    rank1 = {s: i for i, s in enumerate(synsets1)}
+    rank2 = {s: i for i, s in enumerate(synsets2)}
+
+    # Find the best synset pair using a balanced scoring:
+    # 1st: match_priority (prefer synsets whose primary lemma matches the word)
+    # 2nd: freq_rank + dist combined (balance between common senses and short paths)
     scored_pairs = []
     seen_paths = set()  # deduplicate identical paths
 
@@ -172,11 +179,20 @@ def get_path(word1, word2):
                 if dist is None:
                     continue
                 priority = match_priority(s1, word1) + match_priority(s2, word2)
+                
+                # Weight frequency rank higher than distance so common senses win ties.
+                # Example for animal->cat:
+                # - cat.n.01 (feline, rank 0) distance 7 -> score 0*2 + 7 = 7
+                # - cat.n.03 (gossip, rank 2) distance 5 -> score 2*2 + 5 = 9
+                combined_score = (rank1[s1] + rank2[s2]) * 2 + dist
+                
                 # Use a dedup key to avoid showing the same actual path twice
                 dedup_key = (s1.name(), s2.name())
                 if dedup_key not in seen_paths:
                     seen_paths.add(dedup_key)
-                    scored_pairs.append((priority, dist, s1, s2))
+                    # Store tuple: (score_tuple, dist, s1, s2)
+                    # We sort by the score_tuple: (priority, combined_score)
+                    scored_pairs.append(((priority, combined_score), dist, s1, s2))
             except Exception:
                 continue
 
